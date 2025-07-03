@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  AdminUserPassword:
+    Type: String
+    Description: The password for the administrative user.
+    NoEcho: True
+
+Resources:
+  AdminIAMGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: Administrators
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  AdminIAMUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: Administrator
+      Groups:
+        - !Ref AdminIAMGroup
+      LoginProfile:
+        Password: !Ref AdminUserPassword
+
+  AnsibleIAMGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: Ansible
+      # ManagedPolicyArns:
+      #   - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      Policies:
+        - PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  - arn:aws:s3:::backup.bswt.org
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - "arn:aws:s3:::backup.bswt.org/*"
+
+            
+      
+          PolicyName: backups-read-only
+
+
+  AnsibleIAMUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: Ansible
+      Groups:
+        - !Ref AnsibleIAMGroup
+      # LoginProfile:
+      #   Password: !Ref AdminUserPassword

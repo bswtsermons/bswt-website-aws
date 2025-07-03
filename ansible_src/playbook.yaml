@@ -1,0 +1,18 @@
+---
+- name: BSWT Website AWS
+  hosts: localhost
+  roles:
+    - role: bootstrap_iam
+      tags:
+        - bootstrap
+
+    - role: website_instance
+      tags:
+        - website
+
+- name: BSWT Website 2 Setup
+  hosts: bswt_website_2
+  roles:
+    - role: website_setup
+      tags:
+        - website

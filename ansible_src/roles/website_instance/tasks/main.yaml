@@ -1,0 +1,28 @@
+---
+- name: Website Instance
+  module_defaults:
+    group/aws:
+      profile: bswt_administrator
+      region: us-east-1
+
+  block:
+    - name: Testing debug
+      ansible.builtin.debug:
+        msg: Hello, world!
+
+    - name: BSWT Website Instance 2
+      amazon.aws.cloudformation:
+        stack_name: bswt-website-2
+        template_body: "{{ lookup('ansible.builtin.file', (role_path, 'files', 'bswt-website-2.yaml') | path_join) }}"
+      register: bswt_website_2
+
+    - name: Debug
+      ansible.builtin.debug:
+        msg: "{{ bswt_website_2 }}"
+
+    - name: Add BSWT Website 2 Host to Ansible
+      ansible.builtin.add_host:
+        hostname: "{{ bswt_website_2.stack_outputs.BSWTWebsite2PublicIpAddress }}"
+        groups:
+          - bswt_website_2
+        ansible_user: "{{ bswt_website_2.stack_outputs.BSWTWebsite2UserName }}"

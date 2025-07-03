@@ -1,0 +1,18 @@
+---
+- name: Bootstrap IAM
+  module_defaults:
+    group/aws:
+      profile: bswt_administrator
+      region: us-east-1
+
+  block:
+    - name: Testing debug
+      ansible.builtin.debug:
+        msg: Hello, world!
+
+    - name: BSWT Account Setup
+      amazon.aws.cloudformation:
+        stack_name: bswt-account-setup
+        template_body: "{{ lookup('ansible.builtin.file', (role_path, 'files', 'bswt-account-setup.yaml') | path_join) }}"
+        template_parameters:
+          AdminUserPassword: "{{ lookup('ansible.builtin.env', 'ADMIN_USER_PASSWORD') }}"
