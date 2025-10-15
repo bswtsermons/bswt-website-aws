@@ -1,28 +1,71 @@
 ---
 - name: Website Instance
+  vars:
+    bswt_website_2_domain_name: transfer.bswt.org
   module_defaults:
     group/aws:
       profile: bswt_administrator
       region: us-east-1
 
   block:
-    - name: Testing debug
-      ansible.builtin.debug:
-        msg: Hello, world!
-
     - name: BSWT Website Instance 2
       amazon.aws.cloudformation:
         stack_name: bswt-website-2
         template_body: "{{ lookup('ansible.builtin.file', (role_path, 'files', 'bswt-website-2.yaml') | path_join) }}"
-      register: bswt_website_2
+        template_parameters:
+          DomainName: "{{ bswt_website_2_domain_name }}"
+      register: website_instance_bswt_website_2
 
-    - name: Debug
-      ansible.builtin.debug:
-        msg: "{{ bswt_website_2 }}"
+    # - name: Debug
+    #   ansible.builtin.debug:
+    #     msg: "{{ website_instance_bswt_website_2 }}"
+
+    - name: Is Website Static IP Attached to Domain Name?
+      ansible.builtin.command:
+        argv:
+          - aws
+          - lightsail
+          - get-domain
+          - --domain-name
+          - "{{ bswt_website_2_domain_name }}"
+      environment:
+        AWS_PROFILE: bswt_administrator
+      register: website_instance_iwsipatdn_output
+      failed_when: website_instance_iwsipatdn_output.rc != 0
+      changed_when: website_instance_iwsipatdn_output.rc == 0
+
+    # - name: Debug DN
+    #   ansible.builtin.debug:
+    #     msg:
+    #       - "{{ 'domain.domainEntries[?type == `A` && name ==`' + bswt_website_2_domain_name + '`]' }}"
+    #       - "{{ website_instance_iwsipatdn_output.stdout | from_json | community.general.json_query('domain.domainEntries') }}"
+    #       - "{{ website_instance_iwsipatdn_output.rc == 0 }}"
+    #       - "{{ website_instance_iwsipatdn_output.stdout | from_json | community.general.json_query('domain.domainEntries[?type == `A` && name ==`bswt-web.' + bswt_website_2_domain_name + '`]') | length }}"
+
+    - name: Attach Website Static IP to Domain Name
+      # should only fire if the domain was found, and the static IP was not attached
+      when: >-
+        website_instance_iwsipatdn_output.rc == 0
+        and website_instance_iwsipatdn_output.stdout | from_json
+            | community.general.json_query('domain.domainEntries[?type == `A` && name ==`bswt-web.' + bswt_website_2_domain_name + '`]') | length == 0
+      ansible.builtin.command:
+        argv:
+          - echo
+          - aws
+          - lightsail
+          - create-domain-entry
+          - --domain-name
+          - "{{ bswt_website_2_domain_name }}"
+          - --domain-entry
+          - "name=bswt-web.{{ bswt_website_2_domain_name }}.,target={{ website_instance_bswt_website_2.stack_outputs.BSWTWebsite2StaticIpAddress }},type=A"
+      register: website_instance_awsipdn_output
+      environment:
+        AWS_PROFILE: bswt_administrator
+      changed_when: website_instance_awsipdn_output.rc == 0
 
     - name: Add BSWT Website 2 Host to Ansible
       ansible.builtin.add_host:
-        hostname: "{{ bswt_website_2.stack_outputs.BSWTWebsite2PublicIpAddress }}"
+        hostname: "{{ website_instance_bswt_website_2.stack_outputs.BSWTWebsite2PublicIpAddress }}"
         groups:
           - bswt_website_2
-        ansible_user: "{{ bswt_website_2.stack_outputs.BSWTWebsite2UserName }}"
+        ansible_user: "{{ website_instance_bswt_website_2.stack_outputs.BSWTWebsite2UserName }}"

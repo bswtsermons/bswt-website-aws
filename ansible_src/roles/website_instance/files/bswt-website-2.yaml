@@ -1,6 +1,11 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: The template.
 
+Parameters:
+  DomainName:
+    Type: String
+    Description: Name of the domain to apply.
+
 Resources:
   WebSereverLightsailInstance:
     Type: AWS::Lightsail::Instance
@@ -22,6 +27,19 @@ Resources:
           # - CommonName: HTTP
           # - CommonName: HTTPS
 
+  WebServer2LightSailStaticIp:
+    Type: AWS::Lightsail::StaticIp
+    Properties:
+      AttachedTo: bswt-web-2
+      StaticIpName: static-ip-bswt-web-2
+
+  WebServer2Domain:
+    Type: AWS::Lightsail::Domain
+    Properties:
+      # DomainEntries: 
+      #   - 
+      DomainName: !Ref DomainName
+
 Outputs:
   BSWTWebsite2PublicIpAddress:
     Description: The public IP Address of the second BSWT Website.
@@ -34,3 +52,15 @@ Outputs:
   BSWTWebsite2SshKeyName:
     Description: The ssh key used to connect to the second BSWT Website.
     Value: !GetAtt WebSereverLightsailInstance.SshKeyName
+
+  BSWTWebsite2StaticIpAddress:
+    Description: Static IP Address of the second BSWT website. 
+    Value: !GetAtt WebServer2LightSailStaticIp.IpAddress
+    Export:
+      Name: BSWTWebsite2StaticIpAddress
+
+  BSWTWebsite2Domain:
+    Description: Domain for second BSWT Website.
+    Value: !GetAtt WebServer2Domain.Arn
+    Export:
+      Name: BSWTWebsite2Domain

@@ -45,3 +45,17 @@
   become: true
   vars:
     ansible_python_interpreter: "{{ website_setup_venv_dir }}/bin/python"
+
+- name: Install Apache2 Server and php
+  ansible.builtin.apt:
+    name:
+      - apache2
+      - php
+      - libapache2-mod-php
+  become: true
+
+- name: Make sure apache2 is running
+  ansible.builtin.service:
+    name: mariadb
+    state: started
+    enabled: true
